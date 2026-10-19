@@ -1,0 +1,40 @@
+ResumeScan
+
+A free, browser-based tool that checks whether your CV is ATS-friendly. Paste your CV or upload a PDF/TXT file and get a score, a fix-first checklist and an optional keyword match against a job description.
+
+Everything runs in the browser. Your CV is never uploaded or stored.
+
+Features
+
+	•	ATS score out of 100 with a prioritized fix list
+	•	12+ checks: contact details, section headings, length, parser-unfriendly symbols, dates, action verbs, measurable results, weak phrases and buzzwords
+	•	Keyword match against a pasted job description
+	•	PDF and TXT upload (text extracted with pdf.js)
+	•	"Check another CV" button that clears the CV, job description and file
+	•	Responsive layout
+
+Tech Stack
+
+HTML, CSS and vanilla JavaScript in a single file. pdf.js is loaded from a CDN.
+
+Run Locally
+
+git clone https://github.com/nikhil-flux/resumescan.git
+cd resumescan
+python -m http.server 8000
+
+Open http://127.0.0.1:8000/resumescan.html. You can also just double-click the file.
+
+How It Works
+
+	1.	Parse test: contact info, standard headings and symbols that confuse parsers
+	2.	Quality test: length, action verbs, numbers and weak phrases
+	3.	Keyword match: top keywords from the job post vs. your CV
+
+Disclaimer
+
+ResumeScan gives guidance, not a guarantee. Every ATS works differently, so use the score as an improvement checklist.
+
+Author
+
+Built by nikhil-flux

@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ResumeScan – Is your CV ATS-friendly?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{
+  --bg:#EDF1F6; --paper:#FFFFFF; --ink:#13203A; --muted:#5A6882; --line:#D6DDE8;
+  --accent:#2E5BFF; --pass:#14966A; --warn:#C98A00; --fail:#D13B47;
+  --r-lg:20px; --r-sm:8px;
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif;line-height:1.1;letter-spacing:-.02em}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+.logo{font-family:'Bricolage Grotesque';font-weight:800;font-size:1.3rem}
+.logo span{color:var(--accent)}
+nav a{color:var(--muted);text-decoration:none;font-weight:500;font-size:.95rem}
+nav a:hover{color:var(--ink)}
+
+.hero{padding:40px 0 36px;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
+.hero h1{font-size:clamp(2.4rem,6vw,4.2rem);font-weight:800}
+.hero p{margin:18px 0 26px;color:var(--muted);font-size:1.1rem;max-width:46ch}
+.btn{display:inline-block;background:var(--ink);color:#fff;border:0;border-radius:999px;padding:14px 26px;font:600 1rem 'IBM Plex Sans';cursor:pointer;text-decoration:none;transition:transform .15s,background .15s}
+.btn:hover{background:var(--accent);transform:translateY(-1px)}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.ghost:hover{background:var(--paper);color:var(--ink);border-color:var(--ink)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+/* the scanning paper — the one memorable element */
+.sheet{background:var(--paper);border-radius:var(--r-lg);padding:28px;position:relative;overflow:hidden;box-shadow:0 30px 60px -30px rgba(19,32,58,.35);transform:rotate(1.5deg)}
+.sheet .l{height:9px;border-radius:5px;background:var(--line);margin:11px 0}
+.sheet .l.h{height:14px;width:45%;background:var(--ink)}
+.sheet .l.hl{background:#CFE3D9}
+.sheet .l.bad{background:#F5D3D6}
+.scan{position:absolute;left:0;right:0;height:60px;top:-60px;background:linear-gradient(transparent,rgba(46,91,255,.22),transparent);border-bottom:2px solid var(--accent);animation:scan 3.2s ease-in-out 1 .4s forwards}
+@keyframes scan{to{top:100%}}
+@media (prefers-reduced-motion:reduce){.scan{animation:none;display:none}.btn{transition:none}}
+
+main{padding-bottom:70px}
+.tool{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.panel{background:var(--paper);border-radius:var(--r-lg);padding:24px}
+.panel h2{font-size:1.5rem;margin-bottom:6px}
+.sub{color:var(--muted);font-size:.95rem;margin-bottom:16px}
+textarea{width:100%;min-height:300px;border:1.5px solid var(--line);border-radius:12px;padding:14px;font:400 .93rem/1.5 'IBM Plex Sans';resize:vertical;color:var(--ink);background:#FAFBFD}
+textarea.jd{min-height:96px;margin-top:6px}
+textarea:focus{border-color:var(--accent);outline:none}
+label{font-weight:600;font-size:.92rem;display:block;margin:14px 0 2px}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:16px;text-align:center;color:var(--muted);cursor:pointer;margin-bottom:12px;transition:border-color .15s,background .15s}
+.drop:hover,.drop.on{border-color:var(--accent);background:#F3F6FF}
+.drop input{display:none}
+.row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+
+.empty{text-align:center;color:var(--muted);padding:60px 10px}
+.empty b{display:block;font-family:'Bricolage Grotesque';font-size:1.3rem;color:var(--ink);margin-bottom:6px}
+.score{display:flex;gap:22px;align-items:center;margin-bottom:20px}
+.ring{--p:0;width:130px;height:130px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:conic-gradient(var(--c,var(--accent)) calc(var(--p)*1%),var(--line) 0)}
+.ring div{width:104px;height:104px;border-radius:50%;background:var(--paper);display:grid;place-items:center;
+  font:800 2.3rem 'Bricolage Grotesque'}
+.verdict h3{font-size:1.5rem}
+.verdict p{color:var(--muted);font-size:.95rem;margin-top:4px}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.chip{background:var(--bg);border-radius:999px;padding:5px 12px;font-size:.85rem;font-weight:500}
+.checks{list-style:none;padding:0}
+.checks li{display:grid;grid-template-columns:28px 1fr;gap:10px;padding:13px 0;border-top:1px solid var(--line)}
+.dot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:.8rem;margin-top:2px}
+.pass .dot{background:var(--pass)} .warn .dot{background:var(--warn)} .fail .dot{background:var(--fail)}
+.checks strong{display:block;font-weight:600}
+.checks span{color:var(--muted);font-size:.92rem}
+.kw{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
+.kw h3{font-size:1.1rem;margin-bottom:8px}
+.tag{display:inline-block;border-radius:6px;padding:3px 9px;margin:0 6px 6px 0;font-size:.85rem}
+.tag.ok{background:#D9F0E7;color:#0C6A4A}.tag.no{background:#F8DDE0;color:#9E2630}
+
+.how{padding:20px 0 60px}
+.how h2{font-size:2rem;margin-bottom:20px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.steps div{border-left:3px solid var(--accent);padding:2px 0 2px 16px}
+.steps h3{font-size:1.15rem;margin-bottom:4px}
+.steps p{color:var(--muted);font-size:.95rem}
+footer{border-top:1px solid var(--line);padding:24px 0;color:var(--muted);font-size:.88rem}
+
+@media(max-width:860px){
+  .hero,.tool,.steps{grid-template-columns:1fr}
+  .sheet{transform:none}
+  .score{flex-direction:column;align-items:flex-start}
+}
+
+/* ---- v2 polish ---- */
+body{background:
+  radial-gradient(900px 500px at 85% -10%,rgba(46,91,255,.18),transparent 60%),
+  radial-gradient(700px 400px at -5% 10%,rgba(20,150,106,.14),transparent 60%),var(--bg);background-attachment:fixed}
+nav{position:sticky;top:0;z-index:5;backdrop-filter:blur(10px);background:rgba(237,241,246,.7);margin:0 -20px;padding:16px 20px}
+.pill{display:inline-flex;align-items:center;gap:8px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:.88rem;font-weight:500;margin-bottom:18px}
+.pulse{width:9px;height:9px;border-radius:50%;background:var(--pass);box-shadow:0 0 0 0 rgba(20,150,106,.6);animation:pulse 2s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 9px rgba(20,150,106,0)}100%{box-shadow:0 0 0 0 rgba(20,150,106,0)}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:6px 0 46px}
+.strip div{background:var(--paper);border-radius:16px;padding:18px}
+.strip b{display:block;font:800 2rem 'Bricolage Grotesque'}
+.strip span{color:var(--muted);font-size:.9rem}
+.sec{padding:30px 0 20px}
+.sec>h2{font-size:2rem;margin-bottom:6px}
+.sec>.sub{max-width:60ch}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px}
+.card{background:var(--paper);border-radius:var(--r-lg);padding:22px}
+.card h3{font-size:1.15rem;margin-bottom:6px}
+.card p{color:var(--muted);font-size:.94rem}
+.card .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:1.2rem;margin-bottom:12px;background:#E6ECFF}
+.tips{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+.tips .do{border-top:4px solid var(--pass)}.tips .dont{border-top:4px solid var(--fail)}
+.tips ul{padding-left:18px;color:var(--muted);font-size:.94rem}.tips li{margin:6px 0}
+details{background:var(--paper);border-radius:14px;padding:16px 20px;margin-top:10px}
+summary{cursor:pointer;font-weight:600}
+details p{color:var(--muted);margin-top:8px;font-size:.95rem}
+.stories{background:var(--ink);color:#fff;border-radius:var(--r-lg);padding:32px;margin:30px 0}
+.stories h2{font-size:1.8rem}
+.stories p{color:#B9C4DA;margin:8px 0 16px;max-width:58ch}
+.stories .btn{background:#fff;color:var(--ink)}.stories .btn:hover{background:var(--accent);color:#fff}
+.quote{background:rgba(255,255,255,.08);border-radius:14px;padding:18px;margin-top:12px}
+.quote small{color:#B9C4DA}
+@media(max-width:860px){.strip{grid-template-columns:1fr 1fr}.grid3,.tips{grid-template-columns:1fr}}
+
+/* ---- scanning screen ---- */
+.scanning h3{font-size:1.5rem;margin-bottom:14px}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin-bottom:18px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width 1s linear}
+.steplist{list-style:none;padding:0;margin-bottom:18px}
+.steplist li{display:flex;gap:10px;padding:7px 0;color:var(--muted);font-size:.95rem}
+.steplist li b{width:20px;flex:none;text-align:center}
+.steplist li.done b{color:var(--pass)}
+.steplist li.cur{color:var(--ink);font-weight:500}
+.steplist li.cur b{color:var(--accent);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.steplist li.cur b{animation:none}.bar i{transition:none}}
+
+/* ---- v3: report preview (empty state) ---- */
+.pv-head{display:flex;gap:20px;align-items:center;margin-bottom:6px}
+.pv-ring{width:110px;height:110px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:conic-gradient(var(--accent) 0 18%,var(--line) 0);position:relative;animation:spin 6s linear infinite}
+.pv-ring::after{content:"";position:absolute;inset:11px;border-radius:50%;background:var(--paper)}
+.pv-ring-wrap{position:relative;width:110px;height:110px;flex:none}
+.pv-ring-wrap .pv-ring{position:absolute;inset:0}
+.pv-ring-wrap b{position:absolute;inset:0;display:grid;place-items:center;font:800 1.9rem 'Bricolage Grotesque';color:var(--muted);z-index:2}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pv-head h3{font-size:1.45rem}
+.pv-head p{color:var(--muted);font-size:.93rem;margin-top:4px}
+.pv-label{font:600 .78rem 'IBM Plex Sans';text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:20px 0 6px}
+.pv-list{list-style:none;padding:0}
+.pv-list li{display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:center;padding:11px 0;border-top:1px solid var(--line)}
+.pv-list .pd{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:.75rem;color:#fff;font-weight:700}
+.pv-list .pd.p{background:var(--pass)}.pv-list .pd.w{background:var(--warn)}.pv-list .pd.f{background:var(--fail)}
+.pv-list strong{display:block;font-weight:600;font-size:.95rem}
+.pv-list span.t{color:var(--muted);font-size:.85rem}
+.pv-list .sk{width:54px;height:9px;border-radius:5px;background:linear-gradient(90deg,var(--line) 25%,#EDF1F6 50%,var(--line) 75%);background-size:200% 100%;animation:shimmer 1.8s linear infinite}
+@keyframes shimmer{to{background-position:-200% 0}}
+.pv-tip{display:flex;gap:12px;align-items:flex-start;background:#F3F6FF;border:1px solid #DCE5FF;border-radius:14px;padding:14px 16px;margin-top:16px}
+.pv-tip i{font-style:normal;font-size:1.2rem;line-height:1.3}
+.pv-tip small{display:block;font:600 .75rem 'IBM Plex Sans';text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:2px}
+.pv-tip p{font-size:.92rem;color:var(--ink);transition:opacity .25s;min-height:2.9em}
+.pv-cta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.pv-cta span{color:var(--muted);font-size:.9rem}
+.btn.sm{padding:9px 18px;font-size:.9rem}
+@media (prefers-reduced-motion:reduce){.pv-ring,.pv-list .sk{animation:none}.pv-tip p{transition:none}}
+@media(max-width:860px){.pv-head{flex-direction:column;align-items:flex-start}}
+.done-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="logo">Resume<span>Scan</span></div>
+    <a href="#check">Check my CV</a>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <div class="pill"><span class="pulse"></span><span id="count">Free · No sign-up · Runs in your browser</span></div>
+      <h1>Will a robot read your CV before a human does?</h1>
+      <p>Most companies filter applications with ATS software. Paste your CV and see in seconds whether it can be parsed, how strong it reads, and what to fix first.</p>
+      <a class="btn" href="#check">Check my CV for free</a>
+    </div>
+    <div class="sheet" aria-hidden="true">
+      <div class="l h"></div><div class="l" style="width:60%"></div>
+      <div class="l hl"></div><div class="l hl" style="width:88%"></div><div class="l bad" style="width:70%"></div>
+      <div class="l h" style="width:30%;margin-top:22px"></div>
+      <div class="l hl"></div><div class="l" style="width:92%"></div><div class="l hl" style="width:80%"></div>
+      <div class="l h" style="width:25%;margin-top:22px"></div>
+      <div class="l bad"></div><div class="l" style="width:75%"></div>
+      <div class="scan"></div>
+    </div>
+  </header>
+
+  <div class="strip">
+    <div><b>12+</b><span>checks on parsing, content and keywords</span></div>
+    <div><b>0</b><span>files uploaded to any server</span></div>
+    <div><b>10s</b><span>from paste to full report</span></div>
+    <div><b>Free</b><span>no account, no email needed</span></div>
+  </div>
+
+  <main id="check">
+    <div class="tool">
+      <section class="panel" aria-labelledby="in-h">
+        <h2 id="in-h">Your CV</h2>
+        <p class="sub">Your text stays in your browser. Nothing is uploaded or stored.</p>
+        <label class="drop" id="drop">
+          Drop a PDF or TXT file here, or click to choose
+          <input type="file" id="file" accept=".pdf,.txt">
+        </label>
+        <textarea id="cv" placeholder="…or paste your CV text here"></textarea>
+        <label for="jd">Job description (optional)</label>
+        <p class="sub" style="margin:0">Paste a job post to see which keywords you are missing.</p>
+        <textarea id="jd" class="jd" placeholder="Paste the job description"></textarea>
+        <div class="row">
+          <button class="btn" id="go">Analyze my CV</button>
+          <button class="btn ghost" id="sample">Try a sample</button>
+          <button class="btn ghost" id="clear">Clear</button>
+        </div>
+      </section>
+
+      <section class="panel" aria-live="polite" id="out"></section>
+    </div>
+  </main>
+
+  
+  <section class="sec">
+    <h2>What we look at</h2>
+    <p class="sub">Recruiters skim, and software reads first. Your CV has to pass both.</p>
+    <div class="grid3">
+      <div class="card"><div class="ic">📄</div><h3>Parseability</h3><p>Standard headings, clean characters, readable dates and a single-column flow so nothing gets scrambled.</p></div>
+      <div class="card"><div class="ic">📈</div><h3>Impact</h3><p>Action verbs, numbers and results. This is what separates a duty list from proof you can do the job.</p></div>
+      <div class="card"><div class="ic">🎯</div><h3>Job match</h3><p>Compare your CV with a real job post and see which important keywords are missing.</p></div>
+    </div>
+    <div class="tips">
+      <div class="card do"><h3>Do</h3><ul><li>Use a simple one-column layout</li><li>Name sections Experience, Education, Skills</li><li>Export to PDF with selectable text</li><li>Mirror the job post's exact tool names</li></ul></div>
+      <div class="card dont"><h3>Avoid</h3><ul><li>Tables, text boxes, icons and photos</li><li>Contact info inside headers or footers</li><li>Creative headings like "My journey"</li><li>Keyword stuffing you can't back up</li></ul></div>
+    </div>
+  </section>
+
+  <section class="stories">
+    <h2>Got hired after using ResumeScan?</h2>
+    <p>Real stories from real users will appear here. Tell us what you improved and how your search went.</p>
+    <div id="quotes"></div>
+    <a class="btn" id="storyBtn" href="mailto:hello@example.com?subject=My%20ResumeScan%20story">Share your story</a>
+  </section>
+
+  <section class="sec">
+    <h2>Questions</h2>
+    <details><summary>What is an ATS?</summary><p>An applicant tracking system collects and filters applications. It reads your CV into fields like name, jobs and skills, so messy formatting can hide your details.</p></details>
+    <details><summary>Does a high score guarantee interviews?</summary><p>No. The score shows how readable and strong your CV is. Fit, timing and the employer's own process still matter.</p></details>
+    <details><summary>Is my CV saved anywhere?</summary><p>No. The analysis runs entirely in your browser and your text is never sent to a server.</p></details>
+    <details><summary>Why does my PDF show no text?</summary><p>It's probably an image or scan. An ATS can't read it either, so re-export it from your editor with selectable text.</p></details>
+  </section>
+
+  <section class="how">
+    <h2>How the check works</h2>
+    <div class="steps">
+      <div><h3>Parse test</h3><p>We look for contact details, standard section headings, and symbols that confuse ATS parsers.</p></div>
+      <div><h3>Quality test</h3><p>We check length, action verbs, measurable results, and weak phrases that dilute your impact.</p></div>
+      <div><h3>Keyword match</h3><p>Add a job description and see which of its important words your CV already contains.</p></div>
+    </div>
+  </section>
+
+  <footer>ResumeScan gives guidance, not a guarantee. Every ATS works a little differently, so use the score as a checklist for improvement.</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const STOP = new Set("a an and are as at be by for from has have in is it its of on or that the to was were will with you your we our they their this these those who which not can able must should would about into over more than such other also any all etc per using use work working team teams experience years year role job candidate looking join company".split(" "));
+const VERBS = "led managed built developed designed created implemented launched improved increased reduced delivered automated deployed optimized analyzed achieved established coordinated trained mentored migrated architected engineered streamlined resolved generated drove owned shipped scaled configured maintained monitored integrated secured tested wrote".split(" ");
+const WEAK = ["responsible for","worked on","helped with","helped to","duties included","tasked with","assisted with","participated in","involved in"];
+const BUZZ = ["hard-working","hardworking","team player","go-getter","self-starter","synergy","results-driven","detail-oriented","think outside the box","passionate"];
+const SECTIONS = {
+  experience:/\b(work experience|professional experience|experience|employment history|internship)/i,
+  education:/\b(education|academic|qualifications)/i,
+  skills:/\b(skills|technical skills|technologies|core competencies)/i,
+  summary:/\b(summary|profile|objective|about me)/i,
+  projects:/\b(projects|certifications|achievements)/i
+};
+
+function words(t){return (t.toLowerCase().match(/[a-z][a-z+#.\-]{1,}/g)||[])}
+
+function analyze(text, jd){
+  const checks = [];
+  const add=(s,t,d,w)=>checks.push({s,t,d,w}); // status, title, detail, weight
+  const lower = text.toLowerCase();
+  const wc = text.trim().split(/\s+/).filter(Boolean).length;
+  const lines = text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+
+  // Contact
+  const email = /[\w.+-]+@[\w-]+\.[\w.]+/.test(text);
+  const phone = /(\+?\d[\d\s().-]{8,}\d)/.test(text);
+  const link = /(linkedin\.com|github\.com|portfolio|https?:\/\/)/i.test(text);
+  if(email&&phone) add("pass","Contact details found","Email and phone number are easy to find.",10);
+  else add("fail","Missing contact details",`Add a ${!email?"professional email":""}${!email&&!phone?" and ":""}${!phone?"phone number":""} near the top as plain text.`,10);
+  add(link?"pass":"warn",link?"Profile link included":"No LinkedIn or GitHub link","Recruiters often check a profile. Add a LinkedIn or GitHub URL.",4);
+
+  // Sections
+  const found = Object.entries(SECTIONS).filter(([k,r])=>lines.some(l=>l.length<40&&r.test(l))).map(([k])=>k);
+  const must = ["experience","education","skills"].filter(k=>!found.includes(k));
+  if(!must.length) add("pass","Standard section headings","Experience, Education and Skills are labelled clearly, so an ATS can sort your content.",14);
+  else add("fail","Missing standard headings",`Add clear headings for: ${must.join(", ")}. Use common names, not creative ones like "My Journey".`,14);
+  add(found.includes("summary")?"pass":"warn",found.includes("summary")?"Summary present":"No summary or profile","A 2–3 line summary at the top helps a recruiter decide quickly.",4);
+
+  // Length
+  if(wc<250) add("fail","CV is too short",`${wc} words. Aim for 300–800 words with specific achievements.`,10);
+  else if(wc>900) add("warn","CV is long",`${wc} words. Trim to the most relevant roles so it fits 1–2 pages.`,8);
+  else add("pass","Good length",`${wc} words is a healthy size.`,10);
+
+  // Parse risks
+  const risky = (text.match(/[│┃┆║▪●◆★✔✓➤►■□☐♦️❖→]|\|/g)||[]).length;
+  const tabs = (text.match(/\t/g)||[]).length;
+  if(risky>6||tabs>6) add("warn","Symbols or columns may confuse parsers",`Found ${risky} special symbols or table-like characters. Use a single column and simple "-" or "•" bullets.`,10);
+  else add("pass","Clean, parser-friendly characters","No tables, icons or unusual symbols detected.",10);
+
+  // Dates
+  const dates = (text.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4}|\b\d{1,2}\/\d{4}|\b(19|20)\d{2}\s*[-–]\s*((19|20)\d{2}|present|current)/gi)||[]).length;
+  add(dates>=2?"pass":"warn",dates>=2?"Dates found":"Few clear dates","Use a consistent format such as \"Jan 2024 – Present\" so experience timelines parse correctly.",6);
+
+  // Bullets + verbs
+  const bullets = lines.filter(l=>/^[-•*·▪●]/.test(l));
+  const startVerb = bullets.filter(b=>VERBS.includes(b.replace(/^[-•*·▪●\s]+/,"").split(/\s/)[0].toLowerCase())).length;
+  const usedVerbs = VERBS.filter(v=>new RegExp("\\b"+v+"\\b","i").test(text)).length;
+  if(bullets.length<4) add("warn","Few bullet points","Describe each role with 3–5 short bullets instead of dense paragraphs.",6);
+  if(usedVerbs>=6||startVerb>=4) add("pass","Strong action verbs",`Used ${usedVerbs} impact verbs like "built", "led" or "improved".`,8);
+  else add("warn","Weak or few action verbs","Start bullets with verbs such as Built, Led, Automated, Reduced, Deployed.",8);
+
+  // Metrics
+  const nums = (text.match(/\d+(\.\d+)?\s?(%|x|k|m|\+)|[$£€₹]\s?\d|\b\d{2,}\s?(users|clients|servers|requests|customers|projects|services|repos|pipelines)/gi)||[]).length;
+  if(nums>=3) add("pass","Measurable results",`${nums} numbers or percentages show real impact.`,10);
+  else add("fail","Not enough measurable results","Add numbers: \"cut deploy time by 40%\", \"served 5k users\", \"managed 12 services\".",10);
+
+  // Weak phrases
+  const weak = WEAK.filter(p=>lower.includes(p));
+  add(weak.length?"warn":"pass",weak.length?"Weak phrases found":"No weak phrases",weak.length?`Replace "${weak.join('", "')}" with a strong verb and a result.`:"Your bullets avoid vague wording.",6);
+  const buzz = BUZZ.filter(p=>lower.includes(p));
+  if(buzz.length) add("warn","Overused buzzwords",`Replace "${buzz.join('", "')}" with proof from your work.`,4);
+  if(/\b(i|my|me)\b/i.test(text.replace(/\bI\.T\b/g,""))&&(text.match(/\bI\b/g)||[]).length>3) add("warn","First-person wording","Drop \"I\" and \"my\". CVs use implied first person.",3);
+
+  // Keyword match
+  let kw=null;
+  if(jd&&jd.trim().length>40){
+    const freq={};
+    words(jd).filter(w=>!STOP.has(w)&&w.length>2).forEach(w=>freq[w]=(freq[w]||0)+1);
+    const top = Object.entries(freq).sort((a,b)=>b[1]-a[1]||b[0].length-a[0].length).slice(0,18).map(e=>e[0]);
+    const cvWords = new Set(words(text));
+    const hit = top.filter(w=>cvWords.has(w)), miss = top.filter(w=>!cvWords.has(w));
+    const pct = Math.round(hit.length/Math.max(top.length,1)*100);
+    kw={hit,miss,pct};
+    add(pct>=65?"pass":pct>=40?"warn":"fail","Keyword match with job post",`${pct}% of the job's top keywords appear in your CV.`,12);
+  }
+
+  const total = checks.reduce((a,c)=>a+c.w,0);
+  const got = checks.reduce((a,c)=>a+c.w*(c.s==="pass"?1:c.s==="warn"?.5:0),0);
+  return {score:Math.round(got/total*100),checks,kw,wc,bullets:bullets.length};
+}
+
+const esc = s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- Empty state: report preview ---------- */
+const TIPS = [
+  "Save your CV as a PDF with selectable text. Scanned images are invisible to an ATS.",
+  "Mirror the exact tool names from the job post: \"Kubernetes\", not just \"container orchestration\".",
+  "Numbers beat adjectives. \"Cut deploy time by 40%\" says more than \"fast and efficient\".",
+  "Keep contact details in the page body, never in the header or footer. Many parsers skip those.",
+  "Start every bullet with a strong verb like Built, Automated or Deployed.",
+  "One column, standard headings, simple bullets. Boring layouts parse best."
+];
+let tipTimer=null;
+function startTips(){
+  clearInterval(tipTimer);
+  let k=Math.floor(Math.random()*TIPS.length);
+  const el=$("tip"); if(el) el.textContent=TIPS[k];
+  tipTimer=setInterval(()=>{
+    const e=$("tip"); if(!e){clearInterval(tipTimer);return}
+    k=(k+1)%TIPS.length; e.style.opacity=0;
+    setTimeout(()=>{ if($("tip")){ $("tip").textContent=TIPS[k]; $("tip").style.opacity=1 } },250);
+  },5000);
+}
+function showEmpty(){
+  clearInterval(scanTimer);
+  $("out").innerHTML = `
+    <div class="pv-head">
+      <div class="pv-ring-wrap"><div class="pv-ring"></div><b>--</b></div>
+      <div>
+        <h3>Your report appears here</h3>
+        <p>Add your CV on the left and select Analyze. You get a score out of 100 and a fix-first list.</p>
+      </div>
+    </div>
+    <div class="pv-label">What you'll get</div>
+    <ul class="pv-list" aria-hidden="true">
+      <li><div class="pd p">✓</div><div><strong>Contact details &amp; links</strong><span class="t">Email, phone, LinkedIn, GitHub</span></div><div class="sk"></div></li>
+      <li><div class="pd w">!</div><div><strong>Section headings &amp; layout</strong><span class="t">Can an ATS sort your content?</span></div><div class="sk"></div></li>
+      <li><div class="pd p">✓</div><div><strong>Action verbs &amp; weak phrases</strong><span class="t">Built, Led, Automated vs "worked on"</span></div><div class="sk"></div></li>
+      <li><div class="pd f">✕</div><div><strong>Measurable results</strong><span class="t">Numbers and percentages that prove impact</span></div><div class="sk"></div></li>
+      <li><div class="pd p">✓</div><div><strong>Keyword match</strong><span class="t">Add a job post to see missing keywords</span></div><div class="sk"></div></li>
+    </ul>
+    <div class="pv-tip"><i aria-hidden="true">💡</i><div><small>ATS tip</small><p id="tip"></p></div></div>
+    <div class="pv-cta">
+      <button class="btn sm" id="pvSample">See a sample report</button>
+      <span>or paste your own CV to begin</span>
+    </div>`;
+  $("pvSample").onclick=()=>{ $("sample").click(); $("go").click(); };
+  startTips();
+}
+
+/* ---------- Report ---------- */
+function render(r){
+  clearInterval(tipTimer);
+  const col = r.score>=80?"var(--pass)":r.score>=60?"var(--warn)":"var(--fail)";
+  const [v,d] = r.score>=80?["ATS-ready","Your CV should parse well. Polish the warnings below."]:
+                r.score>=60?["Almost there","A few fixes will make a real difference."]:
+                "Needs work,Fix the red items first; they are the most likely to get you filtered out.".split(",");
+  const icon = {pass:"✓",warn:"!",fail:"✕"};
+  const order = {fail:0,warn:1,pass:2};
+  const list = [...r.checks].sort((a,b)=>order[a.s]-order[b.s]);
+  let h = `<div class="score"><div class="ring" style="--p:${r.score};--c:${col}"><div>${r.score}</div></div>
+    <div class="verdict"><h3>${v}</h3><p>${d}</p></div></div>
+    <div class="stats"><span class="chip">${r.wc} words</span><span class="chip">${r.bullets} bullets</span>
+    <span class="chip">${r.checks.filter(c=>c.s==="fail").length} to fix</span><span class="chip">${r.checks.filter(c=>c.s==="warn").length} to improve</span></div>
+    <ul class="checks">${list.map(c=>`<li class="${c.s}"><div class="dot" aria-hidden="true">${icon[c.s]}</div><div><strong>${esc(c.t)}</strong><span>${esc(c.d)}</span></div></li>`).join("")}</ul>`;
+  if(r.kw) h += `<div class="kw"><h3>Keywords</h3>
+    ${r.kw.hit.map(w=>`<span class="tag ok">${esc(w)}</span>`).join("")}
+    ${r.kw.miss.map(w=>`<span class="tag no">${esc(w)}</span>`).join("")}
+    <p class="sub" style="margin-top:6px">Green words are in your CV. Red words are in the job post but missing. Add them only where they honestly apply.</p></div>`;
+  h += `<div class="done-row"><button class="btn" id="again">Check another CV</button></div>`;
+  $("out").innerHTML = h;
+  $("again").onclick = resetAll;
+  if(innerWidth<860) $("out").scrollIntoView({behavior:"smooth"});
+}
+
+/* Clear the CV, job description and uploaded file completely, then show the empty report again */
+function resetAll(){
+  clearInterval(scanTimer);
+  $("cv").value = "";
+  $("jd").value = "";
+  $("file").value = "";          // lets the same file be chosen again
+  showEmpty();
+  document.getElementById("check").scrollIntoView({behavior:"smooth",block:"start"});
+  $("cv").focus({preventScroll:true});
+}
+$("clear").onclick = resetAll;
+
+let scanTimer=null;
+$("go").onclick = ()=>{
+  const t = $("cv").value;
+  if(t.trim().length<80){
+    clearInterval(scanTimer); clearInterval(tipTimer);
+    $("out").innerHTML = `<div class="empty"><b>Not enough text to analyze</b>Paste your full CV or upload a PDF or TXT file.</div>`;
+    return;
+  }
+  clearInterval(tipTimer);
+  runScan(analyze(t,$("jd").value)); // the real analysis; the screen below reveals each check step by step
+};
+
+function runScan(r){
+  clearInterval(scanTimer);
+  const steps=["Reading your CV text","Looking for contact details","Checking section headings","Measuring length and layout","Scanning for symbols that confuse parsers","Verifying dates and timeline","Reviewing action verbs and bullets","Looking for measurable results","Spotting weak phrases and buzzwords"];
+  if(r.kw) steps.push("Matching keywords with the job post");
+  steps.push("Calculating your score");
+  const per=11000/steps.length; let i=0; const out=$("out");
+  const finish=()=>{clearInterval(scanTimer);render(r)};
+  const draw=()=>{
+    out.innerHTML=`<div class="scanning"><h3>Checking your CV…</h3>
+      <div class="bar"><i style="width:${Math.round((i+1)/steps.length*100)}%"></i></div>
+      <ul class="steplist">${steps.slice(0,i+1).map((x,k)=>`<li class="${k<i?"done":"cur"}"><b>${k<i?"✓":"•"}</b>${x}</li>`).join("")}</ul>
+      <button class="btn ghost" id="skip">Skip to results</button></div>`;
+    $("skip").onclick=finish;
+  };
+  draw(); out.scrollIntoView({behavior:"smooth",block:"start"});
+  scanTimer=setInterval(()=>{ i++; if(i>=steps.length) finish(); else draw(); },per);
+}
+
+$("sample").onclick = ()=>{
+  $("cv").value = `Nikhil Sharma
+nikhil@example.com | +91 98765 43210 | linkedin.com/in/nikhil | github.com/nikhil-flux
+
+SUMMARY
+Junior DevOps engineer who builds CI/CD pipelines and containerized deployments on Kubernetes.
+
+EXPERIENCE
+DevOps Intern, CloudNest - Jan 2025 - Present
+- Built GitHub Actions pipelines that cut deployment time by 45%
+- Automated Docker image builds for 12 microservices
+- Deployed services to Kubernetes and monitored them with Prometheus and Grafana
+- Responsible for maintaining staging environments
+
+PROJECTS
+Video Chat App - Node.js, Docker, Kubernetes
+- Designed a CI/CD workflow that ships every commit to a test cluster in under 6 minutes
+
+EDUCATION
+B.Tech Computer Science - 2020 - 2024
+
+SKILLS
+Docker, Kubernetes, Linux, Git, Terraform, AWS, Bash, Python`;
+};
+
+// File upload
+const drop=$("drop"), file=$("file");
+["dragenter","dragover"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("on")}));
+["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("on")}));
+drop.addEventListener("drop",ev=>{if(ev.dataTransfer.files[0]) load(ev.dataTransfer.files[0])});
+file.onchange=()=>file.files[0]&&load(file.files[0]);
+
+async function load(f){
+  try{
+    if(f.name.toLowerCase().endsWith(".pdf")){
+      pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      const pdf = await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
+      let out="";
+      for(let i=1;i<=pdf.numPages;i++){
+        const c = await (await pdf.getPage(i)).getTextContent();
+        let y=null;
+        c.items.forEach(it=>{ const ny=it.transform[5]; out += (y!==null&&Math.abs(ny-y)>3?"\n":" ")+it.str; y=ny; });
+        out+="\n";
+      }
+      if(out.trim().length<80) throw new Error("scan");
+      $("cv").value=out.trim();
+    } else $("cv").value = await f.text();
+    $("go").click();
+  }catch(e){
+    clearInterval(tipTimer);
+    $("out").innerHTML = `<div class="empty"><b>Could not read that file</b>${e.message==="scan"?"This PDF has no selectable text, which is exactly what an ATS would also see. Export it again from your editor, or paste the text.":"Paste your CV text instead."}</div>`;
+  }finally{
+    file.value=""; // allow choosing the same file again
+  }
+}
+
+// Honest counter: CVs checked on this device (add a backend to show a shared total)
+const TESTIMONIALS = []; // add real ones: {name:"Asha", role:"Junior DevOps, Pune", text:"..."} with permission
+let n=0; try{n=+localStorage.getItem("rs_checks")||0}catch(e){}
+// Real shared counter (counterapi.dev). Change COUNTER_KEY to something unique to your site.
+const COUNTER = "https://api.counterapi.dev/v1/resumescan-CHANGE-ME/cvs-checked";
+const SHOW_FROM = 25; // show the public total only once it is 25 or more
+let total = 0;
+function showCount(){
+  if(total>=SHOW_FROM) $("count").textContent = `${total.toLocaleString()} CVs checked on ResumeScan`;
+  else if(n>0) $("count").textContent = `You've checked ${n} CV${n>1?"s":""} on this device`;
+}
+async function bump(path){
+  try{ const r = await fetch(COUNTER+path); const d = await r.json(); if(typeof d.count==="number"){ total=d.count; showCount(); } }catch(e){}
+}
+showCount(); bump("");   // read current total on page load
+$("go").addEventListener("click",()=>{
+  if($("cv").value.trim().length>=80){
+    n++; try{localStorage.setItem("rs_checks",n)}catch(e){}
+    showCount(); bump("/up");   // add one real check
+  }
+});
+if(TESTIMONIALS.length) $("quotes").innerHTML = TESTIMONIALS.map(t=>`<div class="quote">"${esc(t.text)}"<br><small>${esc(t.name)}, ${esc(t.role)}</small></div>`).join("");
+
+showEmpty(); // initial right-hand panel
+</script>
+</body>
+</html>
